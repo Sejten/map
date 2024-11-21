@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script type="text/javascript" src="js/stuquery.js"></script>
+        <script type="text/javascript" src="js/stuquery.hexmap.js"></script>
+        <link rel="stylesheet" href="css/stuquery.hexmap.css" />
+        <style>
+            .drag-area {
+                width: 100px;
+                height: 100px;
+                background-color: #e0e0e0;
+                border: 2px dashed #aaa;
+                text-align: center;
+                line-height: 100px;
+                cursor: grab;
+                margin: 20px;
+            }
+            .square {
+                width: 25px;
+                height: 25px;
+                background-color: #66bbe2;
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                cursor: grab;
+            }
+            .ex-8 {
+                background-color: #66bbe2;
+                padding: 6% 10%;
+                margin: auto;
+                clip-path: polygon(0% 50%, 25% 100%, 75% 100%, 100% 50%, 75% 0%, 25% 0%);
+            }
+            .token {
+                font-family: serif;
+                border-radius: 100%;
+                background-color: wheat;
+                width: 4em;
+                height: 4em;
+                color: black;
+                display: table-cell;
+                vertical-align: middle;
+            }
+            .token.token-red {
+                color: crimson;
+            }
+            .token .id,
+            .token .odds {
+                font-size: 0.5em;
+            }
+            .token .dice {
+                font-size: 2em;
+            }
+            .castle {
+                background-color: #c8906e;
+            }
+            .free {
+                background-color: #b5c881;
+            }
+            .monster {
+                background-color: crimson;
+            }
+            .fields {
+                background-color: #e9b66c;
+            }
+            .forest {
+                background-color: #55855f;
+            }
+            .desert {
+                background-color: #f5dcad;
+            }
+            .context-menu {
+                position: absolute;
+                text-align: center;
+                background: lightgray;
+                border: 1px solid black;
+            }
+            .context-menu ul {
+                padding: 0px;
+                margin: 0px;
+                min-width: 150px;
+                list-style: none;
+            }
+            .context-menu ul li {
+                padding-bottom: 7px;
+                padding-top: 7px;
+                border: 1px solid black;
+            }
+            .context-menu ul li a {
+                text-decoration: none;
+                color: black;
+            }
+            .context-menu ul li:hover {
+                background: darkgray;
+            }
+            #message-6 {
+                position: relative;
+                display: inline-block;
+                left: 50%;
+                transform: translate3D(-50%, 0, 0);
+                background: black;
+                color: white;
+                padding: 0.25em 0.5em;
+                float: left;
+                z-index: 10;
+            }
+        </style>
+    </head>
+    <body>
+        <section id="basic">
+            <div class="example">
+                <div id="message-6">Click or hover on a hex</div>
+                <div id="hexmap-1">
+                    <code>
+                        { "layout":"odd-r", "hexes": { "A":{"n":"Hex a","q":0,"r":0,"type":"free"}, "B":{"n":"Hex b","q":-1,"r":1,"type":"free"}, "C":{"n":"Hex c","q":1,"r":0,"type":"free"}, "D":{"n":"Hex d","q":1,"r":1,"type":"free"},
+                        "E":{"n":"Hex e","q":1,"r":2,"type":"free"}, "F":{"n":"Castle","q":0,"r":1,"type":"castle"}, "G":{"n":"Hex g","q":0,"r":2,"type":"free"}, "H":{"n":"Hex h","q":-1,"r":2,"type":"monster"}, "I":{"n":"Hex
+                        i","q":0,"r":-1,"type":"monster"}, "J":{"n":"Hex j","q":-2,"r":1,"type":"monster"}, "K":{"n":"Hex k","q":-1,"r":0,"type":"monster"}, "L":{"n":"Hex l","q":1,"r":-1,"type":"monster"}, "M":{"n":"Hex
+                        m","q":-1,"r":-1,"type":"monster"}, "N":{"n":"Hex n","q":2,"r":0,"type":"monster"}, "O":{"n":"Hex o","q":2,"r":1,"type":"monster"}, "P":{"n":"Hex p","q":1,"r":3,"type":"monster"}, "Q":{"n":"Hex
+                        q","q":0,"r":3,"type":"monster"}, "R":{"n":"Hex r","q":-1,"r":3,"type":"monster"}, "S":{"n":"Hex r","q":2,"r":2,"type":"monster"} } }
+                    </code>
+                </div>
+                <div id="new-square-area" class="drag-area">Drag New Square</div>
+            </div>
+        </section>
+        <div id="contextMenu" class="context-menu" style="display: none;">
+            <ul>
+                <li><a id="contextMenuFree">free</a></li>
+                <li><a id="contextMenuMonster">monster</a></li>
+            </ul>
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const newSquareArea = document.getElementById("new-square-area");
+
+                // Function to create a new square element
+                function createSquare(x = 10, y = 10) {
+                    const square = document.createElement("div");
+                    square.className = "square";
+                    square.style.left = x + "px";
+                    square.style.top = y + "px";
+
+                    // Add drag functionality
+                    let isDragging = false;
+                    let offsetX, offsetY;
+
+                    square.addEventListener("mousedown", (e) => {
+                        isDragging = true;
+                        offsetX = e.offsetX;
+                        offsetY = e.offsetY;
+                        square.style.cursor = "grabbing";
+                    });
+
+                    document.addEventListener("mousemove", (e) => {
+                        if (isDragging) {
+                            square.style.left = e.pageX - offsetX + "px";
+                            square.style.top = e.pageY - offsetY + "px";
+                        }
+                    });
+
+                    document.addEventListener("mouseup", () => {
+                        if (isDragging) {
+                            isDragging = false;
+                            square.style.cursor = "grab";
+                        }
+                    });
+
+                    document.body.appendChild(square);
+                }
+
+                // Create a new square when dragging starts from the drag area
+                newSquareArea.addEventListener("mousedown", (e) => {
+                    const rect = newSquareArea.getBoundingClientRect();
+                    createSquare(rect.left, rect.top);
+                });
+            });
+
+            S(document).ready(function () {
+                // Create an object attached to a DOM element with the ID "hexmap-1"
+                var hexmap = S.hexmap("hexmap-1", {
+                    formatLabel: function (id, hex) {
+                        // "id" = unique ID of the hex
+                        // "hex" = object containing the properties of the specific hex
+                        str = hex.n;
+                        str += '<div class="default">Default</div>';
+                        str += '<div class="when-selected">Hover</div>';
+                        return str;
+                    },
+                });
+
+                hexmap.positionHexes().resize();
+
+                // Define the content of each hex
+                hexmap.setContent(function (id, hex) {
+                    ostr = "";
+                    // Display circles to represent the odds
+                    ostr = "●";
+
+                    // Build the circular token that sits on a hex
+                    str = '<div class="token' + (hex.dice == 8 || hex.dice == 6 ? " token-red" : "") + '">';
+                    str += '<div class="id">' + " " + hex.q + "," + hex.r + "</div>";
+                    str += '<div class="dice">' + hex.type + "</div>";
+                    str += '<div class="odds">' + ostr + "</div>";
+
+                    str += "</div>";
+
+                    return str;
+                });
+
+                // Set the CSS class of each hex to be the hex type
+                hexmap.setClass(function (id, hex) {
+                    return hex.type;
+                });
+
+                hexmap.on("click", function (e) {
+                    S("#message-6").html("You have clicked hex " + e.i + " (" + e.hex.id + ")");
+                    menu(e);
+                    console.log("element");
+                    elementClick = true;
+                });
+            });
+            document.onclick = hideMenu;
+            document.getElementById("contextMenuFree").onclick = contextMenuClick;
+            var elementClick = false;
+            function hideMenu() {
+                if (!elementClick) {
+                    document.getElementById("contextMenu").style.display = "none";
+                } else {
+                    elementClick = false;
+                }
+            }
+            function menu(e) {
+                console.log("menu");
+                let menu = document.getElementById("contextMenu");
+                menu.style.display = "block";
+                menu.style.left = e.event.originalEvent.pageX + "px";
+                menu.style.top = e.event.originalEvent.pageY + "px";
+            }
+            function contextMenuClick(e) {
+                console.log("contextMenuClick");
+            }
+        </script>
+    </body>
+</html>
